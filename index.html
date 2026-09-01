@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>To-Do List</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#764ba2">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="To-Do">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    overscroll-behavior-y: contain;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: env(safe-area-inset-top, 20px) 16px calc(env(safe-area-inset-bottom, 20px) + 16px);
+    min-height: 100vh;
+  }
+  .app {
+    background: #fff;
+    width: 100%;
+    max-width: 460px;
+    border-radius: 20px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+    padding: 24px 18px;
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  h1 {
+    margin: 0 0 18px;
+    font-size: 22px;
+    color: #333;
+    text-align: center;
+  }
+  .input-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  #taskInput {
+    flex: 1;
+    padding: 14px;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    font-size: 16px; /* prevents iOS zoom on focus */
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+  #taskInput:focus { border-color: #764ba2; }
+  #addBtn {
+    background: #764ba2;
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    padding: 0 22px;
+    font-size: 22px;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    touch-action: manipulation;
+  }
+  #addBtn:active { transform: scale(0.94); background: #663d91; }
+  .filters {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .filter-btn {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: #f2f2f5;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #555;
+    transition: all 0.2s;
+    touch-action: manipulation;
+  }
+  .filter-btn.active {
+    background: #764ba2;
+    color: #fff;
+  }
+  ul#taskList {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 55vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  li.task {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 6px;
+    border-bottom: 1px solid #f0f0f0;
+    animation: fadeIn 0.2s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  li.task .checkbox {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 2px solid #764ba2;
+    cursor: pointer;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 14px;
+    touch-action: manipulation;
+  }
+  li.task.done .checkbox { background: #764ba2; }
+  li.task span.text {
+    flex: 1;
+    font-size: 16px;
+    color: #333;
+    word-break: break-word;
+  }
+  li.task.done span.text {
+    text-decoration: line-through;
+    color: #aaa;
+  }
+  li.task .delete-btn {
+    background: none;
+    border: none;
+    color: #ccc;
+    font-size: 22px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 6px 8px;
+    transition: color 0.2s;
+    touch-action: manipulation;
+  }
+  li.task .delete-btn:active { color: #e74c3c; }
+  .empty-state {
+    text-align: center;
+    color: #aaa;
+    padding: 30px 0;
+    font-size: 14px;
+  }
+  .footer {
+    margin-top: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    color: #888;
+  }
+  .clear-btn {
+    background: none;
+    border: none;
+    color: #764ba2;
+    cursor: pointer;
+    font-size: 13px;
+    text-decoration: underline;
+    touch-action: manipulation;
+  }
+  .install-banner {
+    display: none;
+    background: #fff3cd;
+    color: #664d03;
+    font-size: 13px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    margin-bottom: 14px;
+    text-align: center;
+  }
+  .install-banner.show { display: block; }
+  .clock {
+    text-align: center;
+    color: #fff;
+    margin-bottom: 12px;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  }
+  .clock .time { font-size: 30px; font-weight: 600; line-height: 1.1; }
+  .clock .date { font-size: 13px; opacity: 0.9; }
+  .datetime-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  #dueInput {
+    flex: 1;
+    padding: 10px 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 14px;
+    color: #555;
+    outline: none;
+  }
+  #dueInput:focus { border-color: #764ba2; }
+  .notify-row {
+    margin-bottom: 14px;
+  }
+  #enableNotif {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 10px;
+    background: #f2f2f5;
+    color: #555;
+    font-size: 13px;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  #enableNotif.granted {
+    background: #d1f4dd;
+    color: #1a7d3f;
+  }
+  li.task .due {
+    display: block;
+    font-size: 12px;
+    color: #999;
+    margin-top: 2px;
+  }
+  li.task.overdue .due {
+    color: #e74c3c;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="clock">
+    <div class="time" id="clockTime">--:--</div>
+    <div class="date" id="clockDate">--</div>
+  </div>
+
+  <h1>📝 My To-Do List</h1>
+
+  <div class="install-banner" id="installBanner">Tap Share → "Add to Home Screen" to install this app</div>
+
+  <div class="notify-row">
+    <button id="enableNotif">🔔 Enable reminders (notification + sound)</button>
+  </div>
+
+  <div class="input-row">
+    <input type="text" id="taskInput" placeholder="What needs to be done?" maxlength="200" autocomplete="off">
+    <button id="addBtn">+</button>
+  </div>
+
+  <div class="datetime-row">
+    <input type="datetime-local" id="dueInput">
+  </div>
+
+  <div class="filters">
+    <button class="filter-btn active" data-filter="all">All</button>
+    <button class="filter-btn" data-filter="active">Active</button>
+    <button class="filter-btn" data-filter="done">Done</button>
+  </div>
+
+  <ul id="taskList"></ul>
+
+  <div class="footer">
+    <span id="itemCount">0 items</span>
+    <button class="clear-btn" id="clearDone">Clear completed</button>
+  </div>
+</div>
+
+<script>
+  const taskInput = document.getElementById('taskInput');
+  const dueInput = document.getElementById('dueInput');
+  const addBtn = document.getElementById('addBtn');
+  const taskList = document.getElementById('taskList');
+  const itemCount = document.getElementById('itemCount');
+  const clearDone = document.getElementById('clearDone');
+  const filterBtns = document.querySelectorAll('.filter-btn');
+  const installBanner = document.getElementById('installBanner');
+  const enableNotifBtn = document.getElementById('enableNotif');
+  const clockTime = document.getElementById('clockTime');
+  const clockDate = document.getElementById('clockDate');
+
+  const STORAGE_KEY = 'todo-app-tasks';
+
+  let tasks = loadTasks();
+  let currentFilter = 'all';
+  let idCounter = tasks.length ? Math.max(...tasks.map(t => t.id)) + 1 : 0;
+
+  function loadTasks() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveTasks() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    } catch (e) { /* storage full or unavailable */ }
+  }
+
+  function addTask() {
+    const text = taskInput.value.trim();
+    if (!text) return;
+    const due = dueInput.value ? new Date(dueInput.value).getTime() : null;
+    tasks.push({ id: idCounter++, text, done: false, due, notified: false });
+    taskInput.value = '';
+    dueInput.value = '';
+    saveTasks();
+    render();
+  }
+
+  function toggleTask(id) {
+    const t = tasks.find(t => t.id === id);
+    if (t) t.done = !t.done;
+    saveTasks();
+    render();
+  }
+
+  function deleteTask(id) {
+    tasks = tasks.filter(t => t.id !== id);
+    saveTasks();
+    render();
+  }
+
+  function render() {
+    taskList.innerHTML = '';
+
+    let visible = tasks;
+    if (currentFilter === 'active') visible = tasks.filter(t => !t.done);
+    if (currentFilter === 'done') visible = tasks.filter(t => t.done);
+
+    if (visible.length === 0) {
+      taskList.innerHTML = '<li class="empty-state">Nothing here yet 🎉</li>';
+    } else {
+      visible.forEach(t => {
+        const li = document.createElement('li');
+        const isOverdue = t.due && !t.done && t.due < Date.now();
+        li.className = 'task' + (t.done ? ' done' : '') + (isOverdue ? ' overdue' : '');
+
+        const checkbox = document.createElement('div');
+        checkbox.className = 'checkbox';
+        checkbox.innerHTML = t.done ? '✓' : '';
+        checkbox.onclick = () => toggleTask(t.id);
+
+        const textWrap = document.createElement('div');
+        textWrap.style.flex = '1';
+        textWrap.style.minWidth = '0';
+
+        const span = document.createElement('span');
+        span.className = 'text';
+        span.textContent = t.text;
+        textWrap.appendChild(span);
+
+        if (t.due) {
+          const due = document.createElement('span');
+          due.className = 'due';
+          due.textContent = (isOverdue ? '⏰ Overdue: ' : '🕒 ') + formatDue(t.due);
+          textWrap.appendChild(due);
+        }
+
+        const del = document.createElement('button');
+        del.className = 'delete-btn';
+        del.innerHTML = '&times;';
+        del.onclick = () => deleteTask(t.id);
+
+        li.appendChild(checkbox);
+        li.appendChild(textWrap);
+        li.appendChild(del);
+        taskList.appendChild(li);
+      });
+    }
+
+    const activeCount = tasks.filter(t => !t.done).length;
+    itemCount.textContent = `${activeCount} item${activeCount !== 1 ? 's' : ''} left`;
+  }
+
+  addBtn.addEventListener('click', addTask);
+  taskInput.addEventListener('keypress', e => {
+    if (e.key === 'Enter') addTask();
+  });
+
+  clearDone.addEventListener('click', () => {
+    tasks = tasks.filter(t => !t.done);
+    saveTasks();
+    render();
+  });
+
+  filterBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      filterBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentFilter = btn.dataset.filter;
+      render();
+    });
+  });
+
+  render();
+
+  // --- PWA install hints ---
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+    || window.navigator.standalone === true;
+
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+  if (isIOS && !isStandalone) {
+    installBanner.classList.add('show');
+  }
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    // Android/Chrome: browser shows its own install prompt automatically;
+    // this listener is kept in case you want a custom "Install" button later.
+    e.preventDefault();
+    window.deferredInstallPrompt = e;
+  });
+
+  // --- Register service worker for offline support ---
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('service-worker.js').catch(() => {});
+    });
+  }
+
+  // --- Live clock ---
+  function updateClock() {
+    const now = new Date();
+    clockTime.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    clockDate.textContent = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  function formatDue(ts) {
+    const d = new Date(ts);
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ', ' +
+           d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  // --- Notification permission ---
+  function updateNotifButton() {
+    if (!('Notification' in window)) {
+      enableNotifBtn.textContent = '🔕 Notifications not supported';
+      enableNotifBtn.disabled = true;
+      return;
+    }
+    if (Notification.permission === 'granted') {
+      enableNotifBtn.textContent = '🔔 Reminders enabled';
+      enableNotifBtn.classList.add('granted');
+    } else {
+      enableNotifBtn.textContent = '🔔 Enable reminders (notification + sound)';
+      enableNotifBtn.classList.remove('granted');
+    }
+  }
+  updateNotifButton();
+
+  enableNotifBtn.addEventListener('click', async () => {
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'granted') {
+      // quick test ping so the user knows it works
+      playChime();
+      new Notification('🔔 Reminders are on', { body: 'You\'ll be notified when a task is due.' });
+      return;
+    }
+    const perm = await Notification.requestPermission();
+    updateNotifButton();
+    if (perm === 'granted') {
+      playChime();
+      new Notification('🔔 Reminders are on', { body: 'You\'ll be notified when a task is due.' });
+    }
+  });
+
+  // --- Chime sound (generated, no external file needed) ---
+  let audioCtx = null;
+  function playChime() {
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      const notes = [523.25, 659.25, 783.99]; // C5, E5, G5 - pleasant ascending chime
+      notes.forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        const startTime = audioCtx.currentTime + i * 0.15;
+        gain.gain.setValueAtTime(0, startTime);
+        gain.gain.linearRampToValueAtTime(0.25, startTime + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.4);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(startTime);
+        osc.stop(startTime + 0.45);
+      });
+    } catch (e) { /* audio not available */ }
+  }
+
+  // --- Check for due tasks every 15s ---
+  function checkDueTasks() {
+    const now = Date.now();
+    let changed = false;
+    tasks.forEach(t => {
+      if (t.due && !t.done && !t.notified && t.due <= now) {
+        t.notified = true;
+        changed = true;
+        playChime();
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('⏰ Task due: ' + t.text, {
+            body: 'Tap to open your to-do list',
+            tag: 'todo-' + t.id
+          });
+        }
+      }
+    });
+    if (changed) saveTasks();
+    render(); // refresh overdue styling as time passes
+  }
+  setInterval(checkDueTasks, 15000);
+  checkDueTasks();
+</script>
+
+</body>
+</html>
